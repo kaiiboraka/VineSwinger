@@ -1,0 +1,18 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://Scripts/Chain.gd" type="Script" id=1]
+[ext_resource path="res://Objects/Link.tscn" type="PackedScene" id=2]
+[ext_resource path="res://Sprites/ZELDA.png" type="Texture" id=3]
+[ext_resource path="res://Sprites/triforce.png" type="Texture" id=4]
+
+[node name="Chain" type="Node2D"]
+script = ExtResource( 1 )
+
+[node name="Sprite" type="Sprite" parent="."]
+position = Vector2( 12, 0 )
+rotation = 1.5708
+texture = ExtResource( 3 )
+
+[node name="Hook" parent="." instance=ExtResource( 2 )]
+position = Vector2( 32, 0 )
+texture = ExtResource( 4 )
