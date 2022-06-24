@@ -8,8 +8,10 @@ class_name Chain
 var linkObj = preload("res://Objects/Link.tscn");
 var points = [Point.new()];
 var links = [Link.new()];
-export var maxLength = 10;
+var linkCount = 10;
+export var chainLength = 120;
 export var deployDuration = .5;
+var trailingLinks = 1;
 var timeSinceFired = 0;
 
 onready var player = get_parent();
@@ -30,7 +32,11 @@ enum ChainState \
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	SetReadyState();
-	hook.hookSpeed = GetMaxChainLength() / deployDuration;
+	hook.hookSpeed = chainLength / deployDuration;
+	linkCount = ceil((chainLength - playerPos.x) / Link.maxHeight);
+	for i in range(trailingLinks):
+		InsertLink();
+	trailingLinks += 1;
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
 	UpdateChain(delta);
@@ -44,6 +50,7 @@ func UpdateChain(delta):
 		ChainState.Deployed:
 			if (!hook.isHooked):
 				SetRetractState();
+				timeSinceFired = 0;
 		ChainState.Retracting:
 			PullChainStep(delta);
 			
@@ -65,8 +72,8 @@ func PullTrigger():
 func FireChainStep(delta):
 	timeSinceFired += delta;
 	hook.ShootHook(delta);
-	if(timeSinceFired >= (deployDuration / maxLength) * (links.size() - 1)):
-		if(links.size() <= maxLength):
+	if(timeSinceFired >= (deployDuration / linkCount) * (links.size() - trailingLinks)):
+		if(links.size() < linkCount):
 			InsertLink();
 		else:
 			SetDeployedState();
@@ -80,8 +87,8 @@ func PullChainStep(delta):
 #	else:
 		ReleaseHook();
 	
-	if(timeSinceFired >= (deployDuration / maxLength) * (maxLength - links.size())):
-		if(links.size() != 1):
+	if(timeSinceFired >= (deployDuration / linkCount) * (linkCount - links.size() - trailingLinks)):
+		if(links.size() != trailingLinks):
 			RetractLink();
 		else:
 			SetReadyState();
@@ -89,34 +96,27 @@ func PullChainStep(delta):
 func ClampPlayer(delta):
 	var distFromAnchor = player.global_position - hook.anchorPos;
 	#d=
-	var mDist = Link.maxHeight * links.size();
-	distFromAnchor = distFromAnchor.clamped(mDist);
+	var currMax = Link.maxHeight * links.size();
+	distFromAnchor = distFromAnchor.clamped(currMax);
 	player.global_position = distFromAnchor + hook.anchorPos;
 	#player.global_position = points.back().global_position;
 #	var anchorAngle = Vector2(cos(rotation), sin(rotation)).normalized();
 #	if (distFromAnchor > GetMaxChainLength()):
 #		player.move_and_slide(distFromAnchor  * anchorAngle * 10, Vector2(0, -1));
-#	var newHeight = (distFromAnchor.length()/mDist) * Link.maxHeight;
-#	if(newHeight > Link.maxHeight):
-#		newHeight = Link.maxHeight;
-#	for link in links:
-#		link.height = newHeight;
 
 func RetractLink():
-	var retractDir = GetChainDirection();
-	var prevPointPos = readyPos;
-	for point in points:
-		var current = point.position;
-		point.position = prevPointPos
-		prevPointPos = current;
+	for i in range(points.size() - 1):
+		points[i].position = points[i+1].position;
 	RemoveLink();
+	if(links.size() == trailingLinks):
+		SetReadyState();
 
 func InsertLink():
 	points.back().ChangeLock(false);
 	var newPoint = Point.new();
 	newPoint.InitPoint(playerPos);
 	var link = linkObj.instance();
-#	link.z_index = maxLength - links.size();
+	link.z_index = linkCount - links.size();
 	link.SetLink(points.back(), newPoint);
 	add_child(link)
 	links.push_back(link);
@@ -124,17 +124,14 @@ func InsertLink():
 	points.back().ChangeLock(true);
 	
 func RemoveLink():
-	if(links.size() > 1):
-		remove_child(links.back());
-		links.pop_back();
-		points.pop_back();
+	remove_child(links.back());
+	links.pop_back();
+	points.pop_back();
 	points.back().ChangeLock(true);
+	points.back().position = playerPos;
 
 func GetChainDirection():
 	return (points.front().position - points.back().position).normalized();
-
-func GetMaxChainLength():
-	return Link.maxHeight * maxLength;
 
 func GetHookAngle():
 	return (hook.global_position - global_position).angle()
@@ -148,7 +145,7 @@ func SetReadyState():
 	hook.position = readyPos;
 	points = [hook.ptHead, hook.ptFeet];
 	links = [hook];
-#	hook.z_index = maxLength;
+	hook.z_index = linkCount;
 	hook.Release();
 
 func SetShootState():

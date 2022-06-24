@@ -5,7 +5,8 @@ class_name Link
 var ptHead;
 var ptFeet;
 const maxHeight = 12;
-var height = 0;
+export var overlapRatio = .2;
+var height = maxHeight * (1-overlapRatio);
 
 func _init():
 	ptHead = Point.new();

@@ -29,7 +29,7 @@ scale = Vector2( 52.7974, 0.255395 )
 z_index = -101
 
 [node name="Ceiling" parent="." instance=ExtResource( 3 )]
-position = Vector2( 482, 15 )
+position = Vector2( 480, 16 )
 scale = Vector2( 52.7974, 0.255395 )
 z_index = -99
 
@@ -40,7 +40,7 @@ position = Vector2( 704, 199 )
 position = Vector2( 590, 128 )
 
 [node name="Block3" parent="." instance=ExtResource( 3 )]
-position = Vector2( 531, 255 )
+position = Vector2( 416, 248 )
 
 [node name="Block4" parent="." instance=ExtResource( 3 )]
 position = Vector2( 419, 199 )

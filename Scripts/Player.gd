@@ -76,9 +76,9 @@ func _physics_process(delta):
 	
 func PlayerStateUpdate(delta):
 	MoveState();
+	HangState();
 	GroundState(delta);
 	JumpState();
-	HangState();
 	#print(PlayerState.keys()[currentState])
 
 func HangState():

@@ -25,9 +25,11 @@ func _process(delta):
 	
 	
 func UpdateDebugText():
-	var outText = "Debug Text";
-	outText += "\nPlayer State: " + player.PlayerState.keys()[player.currentState];
-	outText += "\nChain State: " + chain.ChainState.keys()[chain.currentState];
-	outText += "\nHook State: " + str(hook.isHooked);
-	debugText.text = outText;
-	
+	debugText.text = "Debug Text";
+	AddText(debugText,"Player State: " + player.PlayerState.keys()[player.currentState]);
+	AddText(debugText,"Chain State: " + chain.ChainState.keys()[chain.currentState]);
+	AddText(debugText,"Hook State: " + str(hook.isHooked));
+	AddText(debugText,"Chain Length: " + str(chain.linkCount));
+
+func AddText(os, newText):
+	os.text += "\n" + newText;

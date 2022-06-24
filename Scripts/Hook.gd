@@ -16,7 +16,7 @@ func _physics_process(delta):
 		global_position = anchorPos;
 		ptHead.position = position;
 		ptFeet.position = position;
-		ptFeet.position.x -= maxHeight;
+		ptFeet.position.x -= 6;
 
 func ShootHook(delta):
 	ptHead.ChangeLock(true);
@@ -35,7 +35,7 @@ func CheckHookCollision():
 	
 func Release():
 	isHooked = false;
-	ptHead.ChangeLock(false);
+#	ptHead.ChangeLock(false);
 	Disable(true);
 
 func Disable(toggle):
