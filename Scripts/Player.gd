@@ -4,7 +4,6 @@ class_name Player
 
 var velocity = Vector2();
 
-var pullForce = 1000;
 var moveSpeed = 300;
 const maxJumpHeight = 120;
 const timeTilJumpApex = .5;
@@ -45,7 +44,7 @@ var states = \
 	PlayerState.Jumping : false,
 	PlayerState.Falling : false,
 	PlayerState.Hanging : false,
-}	
+}
 
 
 # Called when the node enters the scene tree for the first time.
@@ -84,10 +83,12 @@ func PlayerStateUpdate(delta):
 
 func HangState():
 	if (Input.is_action_just_pressed("player_hook")):
-		chain.PullTrigger(get_local_mouse_position(), get_global_mouse_position());
+		chain.PullTrigger();
 	if (Input.is_action_just_pressed("player_releaseHook")):
 		chain.ReleaseHook();
-	states[PlayerState.Hanging] = true if (chain.states[chain.ChainState.Hooked]) else false;
+	states[PlayerState.Hanging] = true if (chain.hook.isHooked) else false;
+	if(states[PlayerState.Hanging]):
+		velocity.y = GRAVITY;
 
 func JumpState():
 	if (currHangTime > 0):

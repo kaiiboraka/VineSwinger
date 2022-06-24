@@ -18,9 +18,9 @@ func InitPoint(newPosition):
 func ChangeLock(isLocked):
 	locked = isLocked;
 	
-func Update(delta):
+func Update(delta, downDir):
 	if !locked:
 		var positionBeforeUpdate = position;
 		position += position - prevPosition;
-		position += Vector2.DOWN * Player.GRAVITY * pow(delta, 2);
+		position += downDir * Player.GRAVITY * pow(delta, 2);
 		prevPosition = positionBeforeUpdate;

@@ -8,15 +8,14 @@ class_name Chain
 var linkObj = preload("res://Objects/Link.tscn");
 var points = [Point.new()];
 var links = [Link.new()];
-const maxLength = 8;
-const hookSpeed = 10;
-var hookDir = Vector2(1,0);
+export var maxLength = 10;
+export var deployDuration = .5;
+var timeSinceFired = 0;
 
 onready var player = get_parent();
-onready var hookNode = $Hook;
+onready var hook = $Hook;
 const playerPos = Vector2(15, 0);
 const readyPos  = Vector2(32, 0);
-var grabPos = Vector2(0,0);
 
 var currentState = ChainState.Ready;
 
@@ -26,115 +25,82 @@ enum ChainState \
 	Firing,
 	Deployed,
 	Retracting,
-	Hooked,
 }
-
-var states = \
-{
-	ChainState.Ready : true,
-	ChainState.Firing : false,
-	ChainState.Deployed : false,
-	ChainState.Retracting : false,
-	ChainState.Hooked : false
-}	
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	InitHook();
-
-func InitHook():
-	hookNode.pointA.InitPoint(readyPos);
-	hookNode.pointB.InitPoint(playerPos);
-	hookNode.rotation = 0;
-	hookNode.position = readyPos;
-	points = [hookNode.pointA, hookNode.pointB];
-	#points = [];
-	links = [hookNode];
-	ReleaseHook();
-	
+	SetReadyState();
+	hook.hookSpeed = GetMaxChainLength() / deployDuration;
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
 	UpdateChain(delta);
 	SimulateMotion(delta);
+	LateUpdate(delta);
 
 func UpdateChain(delta):
 	match currentState:
 		ChainState.Firing:
-			FireChainStep();
+			FireChainStep(delta);
+		ChainState.Deployed:
+			if (!hook.isHooked):
+				SetRetractState();
 		ChainState.Retracting:
 			PullChainStep(delta);
-	if (states[ChainState.Hooked]):
-		UpdateHook();
 			
-func UpdateHook():
-	links.front().global_position = grabPos;
-	GetHookPoint().position = links.front().position;
+func LateUpdate(delta):
+	hook.CheckHookCollision();
+	if(currentState == ChainState.Ready):
+		rotation = (get_global_mouse_position() - global_position).angle();
+	elif(hook.isHooked):
+		rotation = GetHookAngle(); 
+		ClampPlayer(delta);
 
-func PullTrigger(mousePos, global):
+func PullTrigger():
+	timeSinceFired = 0;
 	if (currentState == ChainState.Ready):
-		grabPos = global; # collision should be in FireChainStep() 
-		hookDir = (mousePos - playerPos).normalized();
 		SetShootState();
-	elif (currentState == ChainState.Deployed):
-		SetRetractState();
-	
-func SetReadyState():
-	states[ChainState.Retracting] = false;
-	states[ChainState.Ready] = true;
-	currentState = ChainState.Ready;
-	InitHook();
-func SetShootState():
-	states[ChainState.Ready] = false;
-	states[ChainState.Firing] = true;
-	currentState = ChainState.Firing;
-	GetHandPoint().ChangeLock(false);
-func SetDeployedState():
-	states[ChainState.Firing] = false;
-	states[ChainState.Deployed] = true;	
-	currentState = ChainState.Deployed;	
-	GetHandPoint().ChangeLock(true);
-	GetHandPoint().position = playerPos;
-func SetRetractState():
-	states[ChainState.Deployed] = false;
-	states[ChainState.Retracting] = true;
-	currentState = ChainState.Retracting;
-
-func FireChainStep():
-	# TODO: Add collision logic
-	if(links.size() < maxLength):
-		InsertLink();
-		MoveHook();
 	else:
-		SetHooked();
-		SetDeployedState();
+		SetRetractState();
+
+func FireChainStep(delta):
+	timeSinceFired += delta;
+	hook.ShootHook(delta);
+	if(timeSinceFired >= (deployDuration / maxLength) * (links.size() - 1)):
+		if(links.size() <= maxLength):
+			InsertLink();
+		else:
+			SetDeployedState();
 
 func PullChainStep(delta):
-	if(links.size() != 1):
+	timeSinceFired += delta;
+	
+	if (!hook.isHooked):
+#		player.move_and_slide(pullForce * Vector2(cos(rotation), sin(rotation)), GetChainDirection());
+#		player.move_and_slide(CalcPullForce() * Vector2(cos(rotation), sin(rotation)).normalized(), Vector2(0, -1));
+#	else:
+		ReleaseHook();
+	
+	if(timeSinceFired >= (deployDuration / maxLength) * (maxLength - links.size())):
+		if(links.size() != 1):
 			RetractLink();
-			if (states[ChainState.Hooked]):
-				print (GetChainDirection());
-			player.move_and_slide(player.pullForce * hookDir, GetChainDirection());
-			
-	else:
-		#SetHangingState();
-		SetReadyState();
-
-func MoveHook():
-	GetHookPoint().position += hookDir * hookSpeed;
-
-func SetHooked():
-	states[ChainState.Hooked] = true;
-	states[ChainState.Firing] = false;
-	states[ChainState.Deployed] = true;	
-	currentState = ChainState.Deployed;	
-	GetHandPoint().ChangeLock(true);
-	GetHookPoint().ChangeLock(true);
-	GetHandPoint().position = playerPos;
-
-func ReleaseHook():
-	states[ChainState.Hooked] = false;
-	GetHookPoint().ChangeLock(false);
-	pass;
+		else:
+			SetReadyState();
+	
+func ClampPlayer(delta):
+	var distFromAnchor = player.global_position - hook.anchorPos;
+	#d=
+	var mDist = Link.maxHeight * links.size();
+	distFromAnchor = distFromAnchor.clamped(mDist);
+	player.global_position = distFromAnchor + hook.anchorPos;
+	#player.global_position = points.back().global_position;
+#	var anchorAngle = Vector2(cos(rotation), sin(rotation)).normalized();
+#	if (distFromAnchor > GetMaxChainLength()):
+#		player.move_and_slide(distFromAnchor  * anchorAngle * 10, Vector2(0, -1));
+#	var newHeight = (distFromAnchor.length()/mDist) * Link.maxHeight;
+#	if(newHeight > Link.maxHeight):
+#		newHeight = Link.maxHeight;
+#	for link in links:
+#		link.height = newHeight;
 
 func RetractLink():
 	var retractDir = GetChainDirection();
@@ -145,6 +111,58 @@ func RetractLink():
 		prevPointPos = current;
 	RemoveLink();
 
+func InsertLink():
+	points.back().ChangeLock(false);
+	var newPoint = Point.new();
+	newPoint.InitPoint(playerPos);
+	var link = linkObj.instance();
+#	link.z_index = maxLength - links.size();
+	link.SetLink(points.back(), newPoint);
+	add_child(link)
+	links.push_back(link);
+	points.push_back(newPoint);
+	points.back().ChangeLock(true);
+	
+func RemoveLink():
+	if(links.size() > 1):
+		remove_child(links.back());
+		links.pop_back();
+		points.pop_back();
+	points.back().ChangeLock(true);
+
+func GetChainDirection():
+	return (points.front().position - points.back().position).normalized();
+
+func GetMaxChainLength():
+	return Link.maxHeight * maxLength;
+
+func GetHookAngle():
+	return (hook.global_position - global_position).angle()
+
+func SetReadyState():
+	currentState = ChainState.Ready;
+	hook.ptHead.InitPoint(readyPos);
+	hook.ptFeet.InitPoint(playerPos);
+#	hook.ptFeet.ChangeLock(true);
+	hook.rotation = 0;
+	hook.position = readyPos;
+	points = [hook.ptHead, hook.ptFeet];
+	links = [hook];
+#	hook.z_index = maxLength;
+	hook.Release();
+
+func SetShootState():
+	currentState = ChainState.Firing;
+
+func SetDeployedState():
+	currentState = ChainState.Deployed;
+
+func SetRetractState():
+	currentState = ChainState.Retracting;
+
+func ReleaseHook():
+	hook.Release();
+	
 func SimulateMotion(delta):
 	if(currentState == ChainState.Ready):
 		return;
@@ -153,36 +171,10 @@ func SimulateMotion(delta):
 		UpdateLinks();
 
 func UpdatePoints(delta):
+	var downDir = Vector2(sin(rotation), cos(rotation)).normalized();
 	for point in points:
-		point.Update(delta);
+		point.Update(delta, downDir);
 
 func UpdateLinks():
 	for link in links:
 		link.Update();
-
-func GetChainDirection():
-	return (GetHookPoint().position - GetHandPoint().position).normalized();
-	
-func InsertLink():
-	var newPoint = Point.new();
-	#newPoint.ChangeLock(true);
-	newPoint.InitPoint(playerPos);
-	var link = linkObj.instance();
-	link.SetLink(points.back(), newPoint);
-	add_child(link)
-	links.push_back(link);
-	points.push_back(newPoint);
-	
-func RemoveLink():
-	var isHandLocked = GetHandPoint().locked;
-	if(links.size() > 1):
-		remove_child(links.back());
-		links.pop_back();
-		points.pop_back();
-	GetHandPoint().ChangeLock(isHandLocked);
-
-func GetHandPoint():
-	return links[links.size() - 1].pointB;
-
-func GetHookPoint():
-	return links[0].pointA;
