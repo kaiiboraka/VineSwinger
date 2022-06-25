@@ -29,8 +29,8 @@ def PrintValues():
     print(f"jumpDist:{jumpDist}");
     print();
     print(f"To reach maximum height of {jumpHeight} and distance of {jumpDist}:");
-    print(f"The force is {jumpForce:.2f} with {gravity:.2f} gravity.");
-    print(f"It will take {timeTilApex:.2f} seconds.");
+    print(f"The force must be {jumpForce:.2f} with {gravity:.2f} gravity,");
+    print(f"and will take {timeTilApex:.2f} seconds.");
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

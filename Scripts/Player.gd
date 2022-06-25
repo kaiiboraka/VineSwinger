@@ -96,7 +96,8 @@ func JumpState():
 		if(states[PlayerState.Jumping]):
 			velocity.y += jumpForce;
 			currHangTime = 0;
-			print("jumped, hangtime 0'd");
+			if(GameController.debug):
+				print("jumped, hangtime 0'd");
 		currentState = PlayerState.Jumping if states[PlayerState.Jumping] else currentState;
 	
 func MoveState():
@@ -134,8 +135,9 @@ func GetMoveDir():
 		moveDir = 1
 	else: 
 		moveDir = 0
-	if (tempMoveDir != moveDir):
-		print("moveDir changed to: ", moveDir);
+	if(GameController.debug):
+		if (tempMoveDir != moveDir):
+			print("moveDir changed to: ", moveDir);
 	if (moveDir != 0):
 		sprite.scale.x = moveDir;
 	return moveDir

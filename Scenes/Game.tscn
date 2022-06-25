@@ -10,6 +10,7 @@ script = ExtResource( 4 )
 __meta__ = {
 "_edit_lock_": true
 }
+gameSpeed = 0.25
 
 [node name="Sprite" type="Sprite" parent="."]
 position = Vector2( 480, 251.75 )

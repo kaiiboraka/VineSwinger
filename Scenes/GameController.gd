@@ -1,12 +1,11 @@
 extends Node2D
 
+class_name GameController
 
-# Declare member variables here. Examples:
-# var a = 2
-# var b = "text"
 export var gameSpeed = 1.0;
 onready var debugText = $UILayer/Control/DebugText;
 onready var player = $Player;
+const debug = false;
 
 var chain;
 var hook;
@@ -21,7 +20,8 @@ func _ready():
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	UpdateDebugText();
+	if (debug):
+		UpdateDebugText();
 	
 	
 func UpdateDebugText():
@@ -29,7 +29,17 @@ func UpdateDebugText():
 	AddText(debugText,"Player State: " + player.PlayerState.keys()[player.currentState]);
 	AddText(debugText,"Chain State: " + chain.ChainState.keys()[chain.currentState]);
 	AddText(debugText,"Hook State: " + str(hook.isHooked));
-	AddText(debugText,"Chain Length: " + str(chain.linkCount));
+	AddText(debugText,"Max Chain Length: " + str(chain.linkCount));
+	AddText(debugText,"CurrChain Length: " + str(chain.links.size()));
+#	for point in chain.points:
+#		AddText(debugText, str(point.position));
+	for link in chain.links:
+		AddText(debugText,"Idx " + str(link.idx) + ": S:" \
+		+ str(link.height) + "; H:" + PosAsStr(link.linkHead.position) +\
+		 " F:" + PosAsStr(link.linkFeet.position));
 
 func AddText(os, newText):
 	os.text += "\n" + newText;
+	
+func PosAsStr(pos):
+	return "(" + str("%0.2f" % pos.x) +", "+ str("%0.2f" % pos.y) + ")";

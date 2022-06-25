@@ -9,8 +9,8 @@ var locked = bool();
 func _init():
 	position = Vector2(0,0);
 	prevPosition = Vector2(0,0);
-	locked = false;
-	
+	locked = true;
+
 func InitPoint(newPosition):
 	position = newPosition;
 	prevPosition = newPosition;

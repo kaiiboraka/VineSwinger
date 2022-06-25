@@ -8,16 +8,16 @@ class_name Chain
 var linkObj = preload("res://Objects/Link.tscn");
 var points = [Point.new()];
 var links = [Link.new()];
-var linkCount = 10;
-export var chainLength = 120;
-export var deployDuration = .5;
-var trailingLinks = 1;
-var timeSinceFired = 0;
+var linkCount = 10; #calculated
+export var chainLength = 120; #overwritten in inspector
+export var deployDuration = .5;  #overwritten in inspector
+export var trailingLinks = 1;  #overwritten in inspector
+var timeSinceFired = 0; #calculated
 
 onready var player = get_parent();
 onready var hook = $Hook;
-const playerPos = Vector2(15, 0);
-const readyPos  = Vector2(32, 0);
+onready var zelda = $Zelda;
+const playerPos = Vector2(12, 0);
 
 var currentState = ChainState.Ready;
 
@@ -31,17 +31,18 @@ enum ChainState \
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	SetReadyState();
 	hook.hookSpeed = chainLength / deployDuration;
 	linkCount = ceil((chainLength - playerPos.x) / Link.maxHeight);
-	for i in range(trailingLinks):
-		InsertLink();
 	trailingLinks += 1;
+	SetReadyState();
+#	zelda.z_index = linkCount + 1;
+
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
 	UpdateChain(delta);
 	SimulateMotion(delta);
 	LateUpdate(delta);
+
 
 func UpdateChain(delta):
 	match currentState:
@@ -56,11 +57,11 @@ func UpdateChain(delta):
 			
 func LateUpdate(delta):
 	hook.CheckHookCollision();
-	if(currentState == ChainState.Ready):
-		rotation = (get_global_mouse_position() - global_position).angle();
-	elif(hook.isHooked):
+	if(hook.isHooked):
 		rotation = GetHookAngle(); 
 		ClampPlayer(delta);
+	else:#if(currentState == ChainState.Ready):
+		rotation = (get_global_mouse_position() - global_position).angle();
 
 func PullTrigger():
 	timeSinceFired = 0;
@@ -74,7 +75,7 @@ func FireChainStep(delta):
 	hook.ShootHook(delta);
 	if(timeSinceFired >= (deployDuration / linkCount) * (links.size() - trailingLinks)):
 		if(links.size() < linkCount):
-			InsertLink();
+			DeployLink();
 		else:
 			SetDeployedState();
 
@@ -110,25 +111,35 @@ func RetractLink():
 	RemoveLink();
 	if(links.size() == trailingLinks):
 		SetReadyState();
+	UpdateLinks();
 
-func InsertLink():
-	points.back().ChangeLock(false);
-	var newPoint = Point.new();
-	newPoint.InitPoint(playerPos);
-	var link = linkObj.instance();
-	link.z_index = linkCount - links.size();
-	link.SetLink(points.back(), newPoint);
-	add_child(link)
-	links.push_back(link);
-	points.push_back(newPoint);
-	points.back().ChangeLock(true);
-	
 func RemoveLink():
 	remove_child(links.back());
 	links.pop_back();
 	points.pop_back();
 	points.back().ChangeLock(true);
 	points.back().position = playerPos;
+
+func DeployLink():
+	points.back().ChangeLock(false); #on 0,back is the hook
+	var i = points.size() - 1;
+	while(i > 0):
+		points[i].position = points[i - 1].position;
+		i -= 1;
+	points.front().position.x += Link.maxHeight;
+	AddLink();
+	UpdateLinks();
+
+func AddLink():
+	var newPoint = Point.new();
+	newPoint.InitPoint(playerPos + Vector2.ZERO);
+	var link = linkObj.instance();
+	link.SetLink(points.back(), newPoint, links.size());
+	link.z_index = linkCount - links.size();
+	add_child(link);
+	points.push_back(newPoint);
+	links.push_back(link);
+	
 
 func GetChainDirection():
 	return (points.front().position - points.back().position).normalized();
@@ -137,14 +148,19 @@ func GetHookAngle():
 	return (hook.global_position - global_position).angle()
 
 func SetReadyState():
+	while (links.size() != 1):
+		RemoveLink();
 	currentState = ChainState.Ready;
-	hook.ptHead.InitPoint(readyPos);
-	hook.ptFeet.InitPoint(playerPos);
-#	hook.ptFeet.ChangeLock(true);
+	var hookPos = Vector2(playerPos.x + hook.height, playerPos.y);
+	hook.linkHead.InitPoint(hookPos);
+	hook.idx = 0;
+	hook.linkFeet.InitPoint(playerPos);
 	hook.rotation = 0;
-	hook.position = readyPos;
-	points = [hook.ptHead, hook.ptFeet];
+	hook.position = hook.GetCenter();#Vector2(zelda.texture.get_height() + (hook.height / 2),0);
 	links = [hook];
+	points = [hook.linkHead, hook.linkFeet];
+	for i in range(trailingLinks - 1):
+		DeployLink();
 	hook.z_index = linkCount;
 	hook.Release();
 
@@ -173,5 +189,7 @@ func UpdatePoints(delta):
 		point.Update(delta, downDir);
 
 func UpdateLinks():
-	for link in links:
-		link.Update();
+	for i in range(links.size()):
+		links[i].linkHead = points[i];
+		links[i].linkFeet = points[i + 1];
+		links[i].Update();
