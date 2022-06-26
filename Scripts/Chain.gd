@@ -10,7 +10,6 @@ onready var hook = $Hook;
 onready var zelda = $Zelda;
 
 var linkObj = preload("res://Objects/Link.tscn");
-var points = [Point.new()];
 var links = [Link.new()];
 var totalLinkCount = 10; #calculated
 export var maxChainLength = 120.0; #overwritten in inspector
@@ -110,10 +109,10 @@ func LerpChain(delta, direction):
 func LerpStep(delta):
 	var distBetween = currentChainMax - offsetX - hook.height;
 	var stepBetween = 0 if(links.size() == HOOK) else distBetween / (links.size() - HOOK);
-	points.back().position = playerPos;
-	for i in range(HOOK, points.size() - HAND):
-#		points[i].position = Vector2(i * stepBetween, 0);
-		points[i].position = lerp(points[i].position, Vector2(i * stepBetween,0), .1);
+	links.back().linkFeet.position = playerPos;
+	for i in range(links.size() - HAND):
+#		links[i].linkFeet.position = Vector2(i * stepBetween, 0);
+		links[i].linkFeet.position = lerp(links[i].linkFeet.position, Vector2(i * stepBetween,0), .1);
 
 func DeployChainStep(delta):
 	timeSinceFired += delta;
@@ -129,21 +128,23 @@ func DeployChainStep(delta):
 
 func ForceDeployLink():
 	AddLink();
-	points.front().position.x += Link.maxHeight;
-	for i in range(points.size() - HOOK, 0, -1):
-		points[i].position = points[i - 1].position;
+	hook.linkHead.position.x += Link.maxHeight;
+	for i in range(links.size(), 0, -1):
+		links[i].linkHead.position = links[i - 1].linkHead.position;
+#	points.front().position.x += Link.maxHeight;
+#	for i in range(points.size() - HOOK, 0, -1):
+#		points[i].position = points[i - 1].position;
 	currentChainLength += Link.maxHeight;
 	UpdateLinks();
 
 func AddLink():
-	points.back().ChangeLock(false);
+	links.back().linkFeet.ChangeLock(false);
 	var newPoint = Point.new();
 	newPoint.InitPoint(playerPos);
 	var link = linkObj.instance();
-	link.SetLink(points.back(), newPoint, links.size());
+	link.SetLink(links.back().linkFeet, newPoint, links.size());
 	link.z_index = totalLinkCount - links.size();
 	add_child(link);
-	points.push_back(newPoint);
 	links.push_back(link);
 	deployedLinks += DEPLOY;
 	CalcMaxChainLength();
@@ -157,17 +158,18 @@ func RetractChainStep(delta):
 		SetReadyState();
 
 func ForceRetractLink():
-	for i in range(points.size() - HOOK):
-		points[i].position = points[i+1].position;
+	for i in range(links.size()):
+		links[i].linkHead.position = links[i+1].linkFeet.position;
+#	for i in range(points.size() - HOOK):
+#		points[i].position = points[i+1].position;
 	currentChainLength -= Link.maxHeight;
 	RemoveLink();
 
 func RemoveLink():
 	remove_child(links.back());
 	links.pop_back();
-	points.pop_back();
-	points.back().ChangeLock(true);
-	points.back().position = playerPos;
+	links.back().linkFeet.ChangeLock(true);
+	links.back().linkFeet.position = playerPos;
 	deployedLinks += RETRACT; 
 	CalcMaxChainLength();
 
@@ -178,7 +180,6 @@ func InitChain():
 # Reinitialize Hook as the first link
 	hook.Reset(playerPos);
 	links = [hook];
-	points = [hook.linkHead, hook.linkFeet];
 # Add in other permanent links
 	for i in range(permLinks - HOOK):
 		ForceDeployLink();
@@ -210,7 +211,7 @@ func SetRetractState():
 	GameController.DebugPrint("currentState = Retracting");
 
 func GetChainDirection():
-	return (points.front().position - points.back().position).normalized();
+	return (links.front().linkHead.position - links.back().linkFeet.position).normalized();
 
 func GetHookAngle():
 	return (hook.global_position - global_position).angle();
@@ -223,17 +224,18 @@ func CalcMaxChainLength():
 func SimulateMotion(delta):
 	if(currentState == ChainState.Ready):
 		return;
-	UpdatePoints(delta);
+	UpdateLinkPoints(delta);
 	for i in range(100):
 		UpdateLinks();
 
-func UpdatePoints(delta):
+func UpdateLinkPoints(delta):
 	var downDir = Vector2(sin(rotation), cos(rotation)).normalized();
-	for point in points:
-		point.Update(delta, downDir);
+	links.front().linkHead.Update(delta, downDir);
+	for link in links:
+		link.linkFeet.Update(delta, downDir);
 
 func UpdateLinks():
 	for i in range(links.size()):
-		links[i].linkHead = points[i];
-		links[i].linkFeet = points[i + 1];
+#		links[i].linkHead = points[i];
+#		links[i].linkFeet = points[i + 1];
 		links[i].Update();
