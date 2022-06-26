@@ -128,7 +128,7 @@ func DeployChainStep(delta):
 
 func ForceDeployLink():
 	AddLink();
-	hook.linkHead.position.x += Link.maxHeight;
+	hook.linkHead.position.x += maxLinkHeight;#Link.maxHeight;
 	for i in range(links.size(), 0, -1):
 		links[i].linkHead.position = links[i - 1].linkHead.position;
 #	points.front().position.x += Link.maxHeight;
