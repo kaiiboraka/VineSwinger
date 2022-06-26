@@ -17,7 +17,7 @@ _global_script_classes=[ {
 "base": "Node2D",
 "class": "GameController",
 "language": "GDScript",
-"path": "res://Scenes/GameController.gd"
+"path": "res://Scripts/GameController.gd"
 }, {
 "base": "",
 "class": "GitAPI",
@@ -53,6 +53,10 @@ _global_script_class_icons={
 config/name="VineSwinger"
 run/main_scene="res://Scenes/Game.tscn"
 config/icon="res://icon.png"
+
+[autoload]
+
+Clock="*res://Scripts/Clock.gd"
 
 [display]
 

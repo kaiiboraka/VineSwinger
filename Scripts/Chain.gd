@@ -1,23 +1,33 @@
 extends Node2D;
 
 class_name Chain
-# Declare member variables here. Examples:
-# var a = 2
-# var b = "text"
 
-var linkObj = preload("res://Objects/Link.tscn");
-var points = [Point.new()];
-var links = [Link.new()];
-var linkCount = 10; #calculated
-export var chainLength = 120; #overwritten in inspector
-export var deployDuration = .5;  #overwritten in inspector
-export var trailingLinks = 1;  #overwritten in inspector
-var timeSinceFired = 0; #calculated
+func Variables():
+	pass;
 
 onready var player = get_parent();
 onready var hook = $Hook;
 onready var zelda = $Zelda;
-const playerPos = Vector2(12, 0);
+
+var linkObj = preload("res://Objects/Link.tscn");
+var points = [Point.new()];
+var links = [Link.new()];
+var totalLinkCount = 10; #calculated
+export var maxChainLength = 120.0; #overwritten in inspector
+var minChainLength;
+var currentChainMax;
+var currentChainLength;
+export var deployDuration = .5;  #overwritten in inspector
+export var permLinks = 0;
+var deployedLinks = 0;
+var timeSinceFired = 0; #calculated
+var HOOK = 1;
+var HAND = 1;
+var DEPLOY = 1;
+var RETRACT = -1;
+
+export var offsetX = 24.0;
+var playerPos = Vector2(offsetX, 0);
 
 var currentState = ChainState.Ready;
 
@@ -31,11 +41,17 @@ enum ChainState \
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	hook.hookSpeed = chainLength / deployDuration;
-	linkCount = ceil((chainLength - playerPos.x) / Link.maxHeight);
-	trailingLinks += 1;
+	totalLinkCount = HOOK + ceil((maxChainLength - offsetX - hook.height) / Link.maxHeight);
+	
+	minChainLength = offsetX + (permLinks * Link.maxHeight) + hook.height;
+	currentChainLength = minChainLength;
+	hook.hookSpeed = (maxChainLength - minChainLength) / deployDuration;
+	permLinks += HOOK;
+	
 	SetReadyState();
-#	zelda.z_index = linkCount + 1;
+	
+	hook.z_index = totalLinkCount;
+#	zelda.z_index = totalLinkCount + 1;
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
@@ -43,75 +59,108 @@ func _physics_process(delta):
 	SimulateMotion(delta);
 	LateUpdate(delta);
 
+func PullTrigger():
+	if (currentState == ChainState.Ready):
+		SetFiringState();
+	else:
+		SetRetractState();
 
 func UpdateChain(delta):
 	match currentState:
 		ChainState.Firing:
-			FireChainStep(delta);
+			DeployChainStep(delta);
 		ChainState.Deployed:
 			if (!hook.isHooked):
 				SetRetractState();
-				timeSinceFired = 0;
 		ChainState.Retracting:
-			PullChainStep(delta);
-			
+			RetractChainStep(delta);
+
 func LateUpdate(delta):
 	hook.CheckHookCollision();
 	if(hook.isHooked):
 		rotation = GetHookAngle(); 
 		ClampPlayer(delta);
-	else:#if(currentState == ChainState.Ready):
+	elif(currentState == ChainState.Ready):
 		rotation = (get_global_mouse_position() - global_position).angle();
-
-func PullTrigger():
-	timeSinceFired = 0;
-	if (currentState == ChainState.Ready):
-		SetShootState();
 	else:
-		SetRetractState();
+		var neededRotation = (get_global_mouse_position() - global_position).angle();
+		var difference = neededRotation - rotation;
+#		rotation = lerp(rotation, neededRotation, (abs(difference) / PI));
+		var amount = difference / (2 * PI);
+		#TODO: do math
+		rotation_degrees += amount;
 
-func FireChainStep(delta):
+func ClampPlayer(delta):
+	var distFromAnchor = player.global_position - hook.anchorPos;
+	distFromAnchor = distFromAnchor.clamped(currentChainLength);
+	player.global_position = distFromAnchor + hook.anchorPos;
+#	player.move_and_slide(pullForce * Vector2(cos(rotation), sin(rotation)), GetChainDirection());
+#	player.move_and_slide(CalcPullForce() * Vector2(cos(rotation), sin(rotation)).normalized(), Vector2(0, -1));
+
+func LerpChain(delta, direction):
+	hook.MoveHook(delta, direction);
+	currentChainLength += delta * hook.hookSpeed * direction;
+	if(currentChainLength < currentChainMax):
+		RemoveLink();
+	if(currentChainLength > currentChainMax):
+		AddLink();
+	LerpStep(delta);
+	UpdateLinks();
+
+func LerpStep(delta):
+	var distBetween = currentChainMax - offsetX - hook.height;
+	var stepBetween = 0 if(links.size() == HOOK) else distBetween / (links.size() - HOOK);
+	points.back().position = playerPos;
+	for i in range(HOOK, points.size() - HAND):
+#		points[i].position = Vector2(i * stepBetween, 0);
+		points[i].position = lerp(points[i].position, Vector2(i * stepBetween,0), .1);
+
+func DeployChainStep(delta):
 	timeSinceFired += delta;
-	hook.ShootHook(delta);
-	if(timeSinceFired >= (deployDuration / linkCount) * (links.size() - trailingLinks)):
-		if(links.size() < linkCount):
-			DeployLink();
+	hook.Disable(false);
+	if (links.size() < totalLinkCount || currentChainLength < currentChainMax):
+		LerpChain(delta, DEPLOY);
+	else:
+		GameController.DebugPrint("SetDeployState");
+		if(!hook.isHooked):
+			SetRetractState();
 		else:
 			SetDeployedState();
 
-func PullChainStep(delta):
-	timeSinceFired += delta;
-	
-	if (!hook.isHooked):
-#		player.move_and_slide(pullForce * Vector2(cos(rotation), sin(rotation)), GetChainDirection());
-#		player.move_and_slide(CalcPullForce() * Vector2(cos(rotation), sin(rotation)).normalized(), Vector2(0, -1));
-#	else:
-		ReleaseHook();
-	
-	if(timeSinceFired >= (deployDuration / linkCount) * (linkCount - links.size() - trailingLinks)):
-		if(links.size() != trailingLinks):
-			RetractLink();
-		else:
-			SetReadyState();
-	
-func ClampPlayer(delta):
-	var distFromAnchor = player.global_position - hook.anchorPos;
-	#d=
-	var currMax = Link.maxHeight * links.size();
-	distFromAnchor = distFromAnchor.clamped(currMax);
-	player.global_position = distFromAnchor + hook.anchorPos;
-	#player.global_position = points.back().global_position;
-#	var anchorAngle = Vector2(cos(rotation), sin(rotation)).normalized();
-#	if (distFromAnchor > GetMaxChainLength()):
-#		player.move_and_slide(distFromAnchor  * anchorAngle * 10, Vector2(0, -1));
-
-func RetractLink():
-	for i in range(points.size() - 1):
-		points[i].position = points[i+1].position;
-	RemoveLink();
-	if(links.size() == trailingLinks):
-		SetReadyState();
+func ForceDeployLink():
+	AddLink();
+	points.front().position.x += Link.maxHeight;
+	for i in range(points.size() - HOOK, 0, -1):
+		points[i].position = points[i - 1].position;
+	currentChainLength += Link.maxHeight;
 	UpdateLinks();
+
+func AddLink():
+	points.back().ChangeLock(false);
+	var newPoint = Point.new();
+	newPoint.InitPoint(playerPos);
+	var link = linkObj.instance();
+	link.SetLink(points.back(), newPoint, links.size());
+	link.z_index = totalLinkCount - links.size();
+	add_child(link);
+	points.push_back(newPoint);
+	links.push_back(link);
+	deployedLinks += DEPLOY;
+	CalcMaxChainLength();
+
+func RetractChainStep(delta):
+	delta *= hook.pullSpeed;
+	timeSinceFired += delta;
+	if(links.size() != permLinks || currentChainLength >= minChainLength):
+		LerpChain(delta, RETRACT);
+	else:
+		SetReadyState();
+
+func ForceRetractLink():
+	for i in range(points.size() - HOOK):
+		points[i].position = points[i+1].position;
+	currentChainLength -= Link.maxHeight;
+	RemoveLink();
 
 func RemoveLink():
 	remove_child(links.back());
@@ -119,63 +168,58 @@ func RemoveLink():
 	points.pop_back();
 	points.back().ChangeLock(true);
 	points.back().position = playerPos;
+	deployedLinks += RETRACT; 
+	CalcMaxChainLength();
 
-func DeployLink():
-	points.back().ChangeLock(false); #on 0,back is the hook
-	var i = points.size() - 1;
-	while(i > 0):
-		points[i].position = points[i - 1].position;
-		i -= 1;
-	points.front().position.x += Link.maxHeight;
-	AddLink();
-	UpdateLinks();
+func InitChain():
+# Clear the current chain
+	while (links.size() != HOOK):
+		RemoveLink();
+# Reinitialize Hook as the first link
+	hook.Reset(playerPos);
+	links = [hook];
+	points = [hook.linkHead, hook.linkFeet];
+# Add in other permanent links
+	for i in range(permLinks - HOOK):
+		ForceDeployLink();
+# Reassign values
+	CalcMaxChainLength();
+	currentChainLength = minChainLength;
+	deployedLinks = permLinks;
 
-func AddLink():
-	var newPoint = Point.new();
-	newPoint.InitPoint(playerPos + Vector2.ZERO);
-	var link = linkObj.instance();
-	link.SetLink(points.back(), newPoint, links.size());
-	link.z_index = linkCount - links.size();
-	add_child(link);
-	points.push_back(newPoint);
-	links.push_back(link);
-	
+func ReleaseHook():
+	hook.Release();
+
+func SetReadyState():
+	currentState = ChainState.Ready;
+	InitChain();
+	GameController.DebugPrint("currentState = Ready");
+
+func SetFiringState():
+	timeSinceFired = 0;
+	currentState = ChainState.Firing;
+	GameController.DebugPrint("currentState = Firing");
+
+func SetDeployedState():
+	currentState = ChainState.Deployed;
+	GameController.DebugPrint("currentState = Deployed");
+
+func SetRetractState():
+	timeSinceFired = 0;
+	currentState = ChainState.Retracting;
+	GameController.DebugPrint("currentState = Retracting");
 
 func GetChainDirection():
 	return (points.front().position - points.back().position).normalized();
 
 func GetHookAngle():
-	return (hook.global_position - global_position).angle()
+	return (hook.global_position - global_position).angle();
 
-func SetReadyState():
-	while (links.size() != 1):
-		RemoveLink();
-	currentState = ChainState.Ready;
-	var hookPos = Vector2(playerPos.x + hook.height, playerPos.y);
-	hook.linkHead.InitPoint(hookPos);
-	hook.idx = 0;
-	hook.linkFeet.InitPoint(playerPos);
-	hook.rotation = 0;
-	hook.position = hook.GetCenter();#Vector2(zelda.texture.get_height() + (hook.height / 2),0);
-	links = [hook];
-	points = [hook.linkHead, hook.linkFeet];
-	for i in range(trailingLinks - 1):
-		DeployLink();
-	hook.z_index = linkCount;
-	hook.Release();
+func CalcMaxChainLength():
+	currentChainMax = offsetX + ((links.size() - HOOK) * Link.maxHeight) + hook.height;
+	if(currentChainMax > maxChainLength):
+		currentChainMax = maxChainLength;
 
-func SetShootState():
-	currentState = ChainState.Firing;
-
-func SetDeployedState():
-	currentState = ChainState.Deployed;
-
-func SetRetractState():
-	currentState = ChainState.Retracting;
-
-func ReleaseHook():
-	hook.Release();
-	
 func SimulateMotion(delta):
 	if(currentState == ChainState.Ready):
 		return;

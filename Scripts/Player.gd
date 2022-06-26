@@ -4,10 +4,10 @@ class_name Player
 
 var velocity = Vector2();
 
-var moveSpeed = 300;
+var moveSpeed = 200;
 const maxJumpHeight = 120;
 const timeTilJumpApex = .5;
-const jumpDist = 300;
+const jumpDist = 150;
 
 const hangTime = .2;
 var currHangTime = hangTime;
@@ -94,11 +94,11 @@ func JumpState():
 	if (currHangTime > 0):
 		states[PlayerState.Jumping] = Input.is_action_just_pressed("player_jump");
 		if(states[PlayerState.Jumping]):
+			
 			velocity.y += jumpForce;
+			#GameController.DebugPrint("jumped, hangtime 0'd");
+			currentState = PlayerState.Jumping if states[PlayerState.Jumping] else currentState;
 			currHangTime = 0;
-			if(GameController.debug):
-				print("jumped, hangtime 0'd");
-		currentState = PlayerState.Jumping if states[PlayerState.Jumping] else currentState;
 	
 func MoveState():
 	states[PlayerState.Moving] = (moveDir != 0);
@@ -135,9 +135,8 @@ func GetMoveDir():
 		moveDir = 1
 	else: 
 		moveDir = 0
-	if(GameController.debug):
-		if (tempMoveDir != moveDir):
-			print("moveDir changed to: ", moveDir);
+#	if (tempMoveDir != moveDir):
+#		GameController.DebugPrint("moveDir changed to: " + str(moveDir));
 	if (moveDir != 0):
 		sprite.scale.x = moveDir;
 	return moveDir

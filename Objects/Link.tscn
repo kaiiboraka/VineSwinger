@@ -4,7 +4,7 @@
 [ext_resource path="res://Sprites/link.png" type="Texture" id=2]
 
 [node name="Link" type="Sprite"]
-scale = Vector2( 0.5, 0.5 )
+scale = Vector2( 0.25, 0.25 )
 z_index = 10
 texture = ExtResource( 2 )
 script = ExtResource( 1 )
