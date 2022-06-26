@@ -29,6 +29,11 @@ var RETRACT = -1;
 export var offsetX = 24.0;
 var playerPos = Vector2(offsetX, 0);
 
+export var linkScale = Vector2(0.25, 0.25);
+export var hookScale = Vector2(0.25, 0.25);
+export var zeldaScale = Vector2(0.75, 0.75);
+var maxLinkHeight = 12;
+
 var currentState = ChainState.Ready;
 
 enum ChainState \
@@ -41,9 +46,13 @@ enum ChainState \
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	totalLinkCount = HOOK + ceil((maxChainLength - offsetX - hook.height) / Link.maxHeight);
+	hook.scale = hookScale;
+	hook.height = (12/hookScale.x);
+	zelda.scale = zeldaScale;
+	maxLinkHeight = 12/ hookScale.x;
+	totalLinkCount = HOOK + ceil((maxChainLength - offsetX - hook.height) / maxLinkHeight);
 	
-	minChainLength = offsetX + (permLinks * Link.maxHeight) + hook.height;
+	minChainLength = offsetX + (permLinks * maxLinkHeight) + hook.height;
 	currentChainLength = minChainLength;
 	hook.hookSpeed = (maxChainLength - minChainLength) / deployDuration;
 	permLinks += HOOK;
@@ -129,10 +138,10 @@ func DeployChainStep(delta):
 
 func ForceDeployLink():
 	AddLink();
-	points.front().position.x += Link.maxHeight;
+	points.front().position.x += maxLinkHeight;
 	for i in range(points.size() - HOOK, 0, -1):
 		points[i].position = points[i - 1].position;
-	currentChainLength += Link.maxHeight;
+	currentChainLength += maxLinkHeight;
 	UpdateLinks();
 
 func AddLink():
@@ -159,7 +168,7 @@ func RetractChainStep(delta):
 func ForceRetractLink():
 	for i in range(points.size() - HOOK):
 		points[i].position = points[i+1].position;
-	currentChainLength -= Link.maxHeight;
+	currentChainLength -= maxLinkHeight;
 	RemoveLink();
 
 func RemoveLink():
@@ -216,7 +225,8 @@ func GetHookAngle():
 	return (hook.global_position - global_position).angle();
 
 func CalcMaxChainLength():
-	currentChainMax = offsetX + ((links.size() - HOOK) * Link.maxHeight) + hook.height;
+	currentChainMax = offsetX + ((links.size() - HOOK) * maxLinkHeight
+	) + hook.height;
 	if(currentChainMax > maxChainLength):
 		currentChainMax = maxChainLength;
 
