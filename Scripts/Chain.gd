@@ -5,35 +5,38 @@ class_name Chain
 func Variables():
 	pass;
 
+# Objects/Scene Varaibles
 onready var player = get_parent();
 onready var hook = $Hook;
 onready var zelda = $Zelda;
-
 var linkObj = preload("res://Objects/Link.tscn");
-var links = [Link.new()];
-var totalLinkCount = 10; #calculated
-export var maxChainLength = 120.0; #overwritten in inspector
-var minChainLength;
-var currentChainMax;
-var currentChainLength;
-export var deployDuration = .5;  #overwritten in inspector
+
+# Inspector Variables
+export var maxChainLength = 120.0;
+export var deployDuration = .5;
 export var permLinks = 0;
-var deployedLinks = 0;
-var timeSinceFired = 0; #calculated
-var HOOK = 1;
-var HAND = 1;
-var DEPLOY = 1;
-var RETRACT = -1;
-
 export var offsetX = 24.0;
-var playerPos = Vector2(offsetX, 0);
-
 export var linkScale = Vector2(0.25, 0.25);
 export var hookScale = Vector2(0.25, 0.25);
 export var zeldaScale = Vector2(0.75, 0.75);
-var maxLinkHeight = 12;
 
+# Default Variables
+var playerPos = Vector2(offsetX, 0);
 var currentState = ChainState.Ready;
+var maxLinkHeight = 12;
+var deployedLinks = 0;
+var timeSinceFired = 0; #calculated
+var totalLinkCount = 10; #calculated
+var minChainLength;
+var currentChainMax;
+var currentChainLength;
+var links = [Link.new()];
+
+# Constants
+const HOOK = 1;
+const HAND = 1;
+const DEPLOY = 1;
+const RETRACT = -1;
 
 enum ChainState \
 {
@@ -46,9 +49,10 @@ enum ChainState \
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	hook.scale = hookScale;
-	hook.height = (12/hookScale.x);
+	hook.height = (12 * hookScale.x);
 	zelda.scale = zeldaScale;
-	maxLinkHeight = 12/ hookScale.x;
+	zelda.position.x = zelda.texture.get_height() * zeldaScale.x;
+	maxLinkHeight = 24 * linkScale.x;
 	totalLinkCount = HOOK + ceil((maxChainLength - offsetX - hook.height) / maxLinkHeight);
 	
 	minChainLength = offsetX + (permLinks * maxLinkHeight) + hook.height;
@@ -108,9 +112,9 @@ func ClampPlayer(delta):
 func LerpChain(delta, direction):
 	hook.MoveHook(delta, direction);
 	currentChainLength += delta * hook.hookSpeed * direction;
-	if(currentChainLength < currentChainMax):
+	if(currentChainLength < currentChainMax && links.size() > permLinks):
 		RemoveLink();
-	if(currentChainLength > currentChainMax):
+	if(currentChainLength > currentChainMax && links.size() < totalLinkCount):
 		AddLink();
 	LerpStep(delta);
 	UpdateLinks();
@@ -138,7 +142,7 @@ func DeployChainStep(delta):
 func ForceDeployLink():
 	AddLink();
 	hook.linkHead.position.x += maxLinkHeight;
-	for i in range(links.size(), 0, -1):
+	for i in range(links.size() - HOOK, 0, -1):
 		links[i].linkHead.position = links[i - 1].linkHead.position;
 #	points.front().position.x += Link.maxHeight;
 #	for i in range(points.size() - HOOK, 0, -1):
@@ -151,6 +155,7 @@ func AddLink():
 	var newPoint = Point.new();
 	newPoint.InitPoint(playerPos);
 	var link = linkObj.instance();
+	link.scale = linkScale;
 	link.SetLink(links.back().linkFeet, newPoint, links.size());
 	link.z_index = totalLinkCount - links.size();
 	add_child(link);
