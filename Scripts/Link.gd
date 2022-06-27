@@ -2,10 +2,11 @@ extends Sprite
 
 class_name Link
 
+export var overlapRatio = .3;
+
 var linkHead;
 var linkFeet;
-export var overlapRatio = .3;
-var height = maxHeight * (1-overlapRatio);
+var height = 25;
 var idx;
 
 func _init():
@@ -22,7 +23,7 @@ func SetLink(newA, newB, newIdx):
 	idx = newIdx;
 	position = GetCenter();
 	rotation = GetDirection().angle();
-	height = maxHeight * (1-overlapRatio);
+	height = scale.x * texture.get_height() * (1-overlapRatio);
 
 func GetCenter():
 	return (linkHead.position + linkFeet.position) / 2.0;
@@ -48,4 +49,3 @@ func Render():
 	draw_circle(linkHead.position - position, 1, headColor); #
 	draw_circle(Vector2.ZERO, 1, Color.purple);
 	draw_line(linkFeet.position - position, linkHead.position - position, Color.white, .5, true);
-
