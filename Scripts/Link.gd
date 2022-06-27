@@ -4,7 +4,6 @@ class_name Link
 
 var linkHead;
 var linkFeet;
-const maxHeight = 6;
 export var overlapRatio = .3;
 var height = maxHeight * (1-overlapRatio);
 var idx;
