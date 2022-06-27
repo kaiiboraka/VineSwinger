@@ -172,8 +172,8 @@ func RetractChainStep(delta):
 		SetReadyState();
 
 func ForceRetractLink():
-	for i in range(links.size()):
-		links[i].linkHead.position = links[i+1].linkFeet.position;
+	for i in range(links.size() - HAND):
+		links[i].linkHead.position = links[i+1].linkHead.position;
 #	for i in range(points.size() - HOOK):
 #		points[i].position = points[i+1].position;
 	currentChainLength -= maxLinkHeight;
