@@ -15,6 +15,11 @@ var currHangTime = hangTime;
 const jumpForce = -(2 * maxJumpHeight) / timeTilJumpApex;
 const GRAVITY = -jumpForce / timeTilJumpApex;
 
+var tanAngle;
+var distToHook;
+var launchRight;
+var launchLeft;
+
 var moveDir = 1;
 var currentState = PlayerState.Idle;
 var inputVector;
@@ -71,8 +76,23 @@ func _process(delta):
 	#	print("stopped right");
 
 func _physics_process(delta):
+	tanAngle = deg2rad((chain.hook.anchorPos.y - global_position.y) / (chain.hook.anchorPos.x - global_position.x));
+	distToHook = global_position.distance_to(chain.hook.anchorPos);
+	var circleNormal = chain.hook.anchorPos - global_position;
+	#Obtain vector Center of circle - point P1. Let's call this vector v1.
+	#Tangent vector 't' is perpendicular to v1. If v1=(vx, vy) then t=(-vy,vx).
+	launchRight = Vector2(-circleNormal.y, circleNormal.x);
+	launchLeft  = Vector2(circleNormal.y, -circleNormal.x);
 	CalculateMove(delta);
 	PlayerStateUpdate(delta);
+	update();
+	
+func _draw():
+	if(chain.hook.isHooked):
+		var newPos = chain.hook.global_position - position;
+		draw_arc(newPos, distToHook, 0, 2 * PI, 36, Color.chocolate, 1.0, true);
+		draw_line(global_position - position,launchRight, Color.webpurple, 1.0, true);
+		draw_line(global_position - position,launchLeft, Color.violet, 1.0, true);
 	
 func PlayerStateUpdate(delta):
 	MoveState();
@@ -88,17 +108,25 @@ func HangState():
 		chain.ReleaseHook();
 	states[PlayerState.Hanging] = chain.hook.isHooked;
 	if(states[PlayerState.Hanging]):
-		velocity.y = GRAVITY;
+		states[PlayerState.Jumping] = false;
+		states[PlayerState.Falling] = true;
+		velocity.y = min(velocity.y, GRAVITY);
 
 func JumpState():
-	if (currHangTime > 0):
+#	if (states[PlayerState.Jumping]):
+#		return;
+	if (currHangTime > 0 || (states[PlayerState.Hanging])):
 		states[PlayerState.Jumping] = Input.is_action_just_pressed("player_jump");
 		if(states[PlayerState.Jumping]):
 			velocity.y += jumpForce;
 			#GameController.DebugPrint("jumped, hangtime 0'd");
 			currentState = PlayerState.Jumping if states[PlayerState.Jumping] else currentState;
 			currHangTime = 0;
-	
+			if(states[PlayerState.Hanging]):
+				chain.ReleaseHook();
+				velocity = launchRight;
+
+
 func MoveState():
 	states[PlayerState.Moving] = (moveDir != 0);
 	currentState = PlayerState.Moving if states[PlayerState.Moving] else PlayerState.Idle;
@@ -112,7 +140,7 @@ func CalculateMove(delta):
 
 func GroundState(delta):
 	states[PlayerState.Grounded] = is_on_floor();
-	if (is_on_ceiling() && states[PlayerState.Jumping]):
+	if (is_on_ceiling() && !states[PlayerState.Grounded]):
 		velocity.y = 0;
 	if(states[PlayerState.Grounded]):
 		velocity.y = 0;

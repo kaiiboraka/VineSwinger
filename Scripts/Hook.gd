@@ -2,8 +2,8 @@ extends Link
 
 var isHooked = false;
 var anchorPos = Vector2(0, 0);
-var hookSpeed = 10;
-var pullSpeed = 2;
+var hookSpeed = 5;
+var pullSpeed = 5;
 
 onready var kb2d = $KinematicBody2D
 onready var collider = $KinematicBody2D/CollisionShape2D
@@ -22,7 +22,8 @@ func _physics_process(delta):
 
 func MoveHook(delta, dir):
 #	linkFeet.ChangeLock(true);
-	linkHead.position.x += hookSpeed * delta * dir;
+#	linkHead.position.x += hookSpeed * delta * dir;
+	linkHead.position.x += delta * dir;
 	linkFeet.position = Vector2(linkHead.position.x + height, 0);
 	
 

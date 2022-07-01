@@ -13,8 +13,9 @@ onready var spring = $Spring;
 var linkObj = preload("res://Objects/Link.tscn");
 
 # Inspector Variables
-export var maxChainLength = 120.0;
-export var deployDuration = .5;
+export var maxChainLength = 200.0;
+export var deployDuration = .2;
+export var retractDuration = .2;
 export var permLinks = 0;
 export var offsetX = 24.0;
 export var linkScale = Vector2(0.25, 0.25);
@@ -64,6 +65,7 @@ func _ready():
 	minChainLength = offsetX + (permLinks * maxLinkHeight) + hook.height;
 	currentChainLength = minChainLength;
 	hook.hookSpeed = (maxChainLength - minChainLength) / deployDuration;
+	hook.pullSpeed = (maxChainLength - minChainLength) / retractDuration;
 	permLinks += HOOK;
 	
 	spring.node_b = hook.kb2d.get_path();
@@ -83,6 +85,7 @@ func _physics_process(delta):
 	UpdateChain(delta);
 	SimulateMotion(delta);
 	LateUpdate(delta);
+	update();
 
 func PullTrigger():
 	if (currentState == ChainState.Ready):
@@ -124,7 +127,7 @@ func ClampPlayer(delta):
 
 func LerpChain(delta, direction):
 	hook.MoveHook(delta, direction);
-	currentChainLength += delta * hook.hookSpeed * direction;
+	currentChainLength += delta * direction;
 	if(currentChainLength < currentChainMax && links.size() > permLinks):
 		RemoveLink();
 	if(currentChainLength > currentChainMax && links.size() < totalLinkCount):
@@ -141,6 +144,7 @@ func LerpStep(delta):
 		links[i].linkFeet.position = lerp(links[i].linkFeet.position, Vector2(i * stepBetween,0), .1);
 
 func DeployChainStep(delta):
+	delta *= hook.hookSpeed;
 	timeSinceFired += delta;
 	hook.Disable(false);
 	if (links.size() < totalLinkCount || currentChainLength < currentChainMax):
