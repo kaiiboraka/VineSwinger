@@ -6,18 +6,21 @@
 [sub_resource type="CircleShape2D" id=1]
 radius = 14.0
 
-[node name="Hook" type="Sprite"]
+[node name="Hook" type="KinematicBody2D"]
 scale = Vector2( 0.25, 0.25 )
-z_index = 10
-texture = ExtResource( 2 )
+collision_layer = 2
+collision_mask = 2
 script = ExtResource( 1 )
 __meta__ = {
 "_editor_description_": ""
 }
 
-[node name="KinematicBody2D" type="KinematicBody2D" parent="."]
-collision_layer = 2
-collision_mask = 2
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="KinematicBody2D"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource( 1 )
+
+[node name="Sprite" type="Sprite" parent="."]
+z_index = 10
+texture = ExtResource( 2 )
+__meta__ = {
+"_editor_description_": ""
+}

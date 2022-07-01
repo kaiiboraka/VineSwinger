@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=6 format=2]
 
 [ext_resource path="res://Sprites/jumper.png" type="Texture" id=1]
 [ext_resource path="res://Scripts/Player.gd" type="Script" id=2]
 [ext_resource path="res://Objects/Chain.tscn" type="PackedScene" id=3]
+[ext_resource path="res://Objects/Hook.tscn" type="PackedScene" id=4]
 
 [sub_resource type="CapsuleShape2D" id=1]
 radius = 16.0
@@ -25,3 +26,5 @@ texture = ExtResource( 1 )
 shape = SubResource( 1 )
 
 [node name="Chain" parent="." instance=ExtResource( 3 )]
+
+[node name="Hook" parent="." instance=ExtResource( 4 )]

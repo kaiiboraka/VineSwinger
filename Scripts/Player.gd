@@ -88,7 +88,7 @@ func HangState():
 		chain.ReleaseHook();
 	states[PlayerState.Hanging] = chain.hook.isHooked;
 	if(states[PlayerState.Hanging]):
-		velocity.y = GRAVITY;
+		velocity.y = min(velocity.y, GRAVITY);
 
 func JumpState():
 	if (currHangTime > 0):

@@ -1,12 +1,12 @@
-extends Link
+extends KinematicBody2D
 
 var isHooked = false;
 var anchorPos = Vector2(0, 0);
-var hookSpeed = 10;
-var pullSpeed = 2;
-
-onready var kb2d = $KinematicBody2D
-onready var collider = $KinematicBody2D/CollisionShape2D
+var hookSpeed = 300;
+var height;
+var pullSpeed = 200;
+var velocity = Vector2(0,0);
+onready var collider = $CollisionShape2D;
 
 func _ready():
 	height = 3;#scale.x * texture.get_width();
@@ -16,36 +16,35 @@ func _ready():
 func _physics_process(delta):
 	if(isHooked):
 		global_position = anchorPos;
-		linkHead.position = position;
-		linkFeet.position = position;
-		linkFeet.position.x -= height;
+	else:
+		move_and_slide(velocity, Vector2(0, -1));
+		if(!collider.disabled):
+			CheckHookCollision();
 
-func MoveHook(delta, dir):
-#	linkFeet.ChangeLock(true);
-	linkHead.position.x += hookSpeed * delta * dir;
-	linkFeet.position = Vector2(linkHead.position.x + height, 0);
-	
-
+func MoveHook(speed, dir):
+	velocity += speed * Vector2(cos(rotation),sin(rotation)) * dir;
+		
 func CheckHookCollision():
-	var collision = kb2d.move_and_collide(Vector2(0,0), true, true, true);
+	var collision = get_last_slide_collision();
 	if(collision):
 		isHooked = true;
 		anchorPos = collision.position;
 		Disable(true);
+		velocity = Vector2.ZERO;
 		GameController.DebugPrint("chain bumped into something");
 	
 func Reset(playerPos):
 	var hookPos = Vector2(playerPos.x + height, playerPos.y);
-	linkHead.InitPoint(hookPos);
-	linkFeet.InitPoint(playerPos);
-	idx = 0;
+	position = hookPos;
 	rotation = 0;
-	position = GetCenter();
 	Release();
 
 func Release():
+	velocity = Vector2.ZERO;
 	isHooked = false;
 	Disable(true);
 
 func Disable(toggle):
+	collider = $CollisionShape2D;
+#	collider.set_disabled(toggle);
 	collider.set_deferred("disabled", toggle);
