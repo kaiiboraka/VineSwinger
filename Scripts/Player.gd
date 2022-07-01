@@ -86,7 +86,7 @@ func HangState():
 		chain.PullTrigger();
 	if (Input.is_action_just_pressed("player_releaseHook")):
 		chain.ReleaseHook();
-	states[PlayerState.Hanging] = true if (chain.hook.isHooked) else false;
+	states[PlayerState.Hanging] = chain.hook.isHooked;
 	if(states[PlayerState.Hanging]):
 		velocity.y = GRAVITY;
 
@@ -94,7 +94,6 @@ func JumpState():
 	if (currHangTime > 0):
 		states[PlayerState.Jumping] = Input.is_action_just_pressed("player_jump");
 		if(states[PlayerState.Jumping]):
-			
 			velocity.y += jumpForce;
 			#GameController.DebugPrint("jumped, hangtime 0'd");
 			currentState = PlayerState.Jumping if states[PlayerState.Jumping] else currentState;

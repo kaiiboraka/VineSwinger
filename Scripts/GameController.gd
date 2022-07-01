@@ -7,7 +7,6 @@ onready var debugText = $UILayer/Control/DebugText;
 onready var player = $Player;
 const debug = true;
 
-
 var chain;
 var hook;
 
@@ -35,6 +34,10 @@ func UpdateDebugText():
 	AddText(debugText,"Link Count: [" + str(chain.links.size()) + "/" + str(chain.totalLinkCount)+"]");
 	AddText(debugText,"TimeSinceFired: " + str("%0.2f" % chain.timeSinceFired));
 	AddText(debugText,"Rotation: " + str("%0.5f" % chain.rotation) + " [" + str("%4.2f" % chain.rotation_degrees) + "]");
+	AddText(debugText);
+	var hookNode = get_node(chain.spring.node_a);
+	var playerNode = get_node(chain.spring.node_b);
+	AddText(debugText, "Chain.spring node_a: " + PosAsStr(hookNode.global_position));
 	AddText(debugText);
 	#PointPositions(debugText);
 	LinkPositions(debugText);

@@ -11,6 +11,7 @@ script = ExtResource( 4 )
 __meta__ = {
 "_edit_lock_": true
 }
+gameSpeed = 0.5
 
 [node name="Clock" type="Node" parent="."]
 script = ExtResource( 5 )

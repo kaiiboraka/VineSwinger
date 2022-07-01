@@ -9,6 +9,7 @@ func Variables():
 onready var player = get_parent();
 onready var hook = $Hook;
 onready var zelda = $Zelda;
+onready var spring = $Spring;
 var linkObj = preload("res://Objects/Link.tscn");
 
 # Inspector Variables
@@ -46,6 +47,11 @@ enum ChainState \
 	Retracting,
 }
 
+# like Awake() first
+func _init():
+	pass;
+
+# like Start() second
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	hook.scale = hookScale;
@@ -60,10 +66,17 @@ func _ready():
 	hook.hookSpeed = (maxChainLength - minChainLength) / deployDuration;
 	permLinks += HOOK;
 	
+	spring.node_b = hook.kb2d.get_path();
+	spring.node_a = player.get_path();
+	
 	SetReadyState();
 	
 	hook.z_index = totalLinkCount;
 #	zelda.z_index = totalLinkCount + 1;
+
+func _draw():
+	var inv = get_global_transform().affine_inverse();
+	draw_set_transform(inv.get_origin(), inv.get_rotation(), inv.get_scale());
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
